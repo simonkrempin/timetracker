@@ -53,7 +53,11 @@ struct TimeTrackerApp: App {
     }
 
     private var remainingFormatted: String {
-        "\(remaining / 60):\(String(format: "%02d", remaining % 60))"
+        if remaining >= 3600 {
+            "\(remaining / 3600):\(String(format: "%02d", remaining % 3600 / 60))"
+        } else {
+            "\(remaining / 60):\(String(format: "%02d", remaining % 60))"
+        }
     }
 
     private var progress: Double {
@@ -130,7 +134,13 @@ struct TimeTrackerApp: App {
             }
 
         } label: {
-            Image(systemName: "timer")
+            if timerRunning {
+                Text(remainingFormatted)
+                    .font(.caption)
+                    .fontDesign(.monospaced)
+            } else {
+                Image(systemName: "timer")
+            }
         }
         .menuBarExtraStyle(.window)
     }
