@@ -15,11 +15,17 @@ struct TimeTrackerApp: App {
         NSApplication.shared.setActivationPolicy(.accessory)
     }
 
+    private static let minuteValues: [Double] = [20, 30, 45, 60, 90, 120, 180]
+
     @State private var remaining: Int = 0
     @State private var total: Int = 0
-    @State private var durationIndex: Double = 2
+    @State private var durationMinutes: Double = 45
     @State private var timerRunning: Bool = false
     @State private var workingMode: WorkingMode = .sitting
+
+    private var snappedIndex: Int {
+        Self.minuteValues.enumerated().min(by: { abs($0.element - durationMinutes) < abs($1.element - durationMinutes) })!.offset
+    }
 
     private static let sittingDurationOptions: [Int] = [
         20 * 60, 30 * 60, 45 * 60, 60 * 60, 90 * 60, 120 * 60, 180 * 60,
@@ -33,9 +39,9 @@ struct TimeTrackerApp: App {
 
     private var currentDuration: Int {
         switch workingMode {
-        case .sitting: Self.sittingDurationOptions[Int(durationIndex)]
-        case .standing: Self.standingDurationOptions[Int(durationIndex)]
-        case .moving: Self.movementDurationOptions[Int(durationIndex)]
+        case .sitting: Self.sittingDurationOptions[snappedIndex]
+        case .standing: Self.standingDurationOptions[snappedIndex]
+        case .moving: Self.movementDurationOptions[snappedIndex]
         }
     }
 
@@ -92,7 +98,12 @@ struct TimeTrackerApp: App {
                         .font(.title3)
                         .frame(maxWidth: .infinity, alignment: .center)
 
-                    Slider(value: $durationIndex, in: 0...6, step: 1)
+                    Slider(value: $durationMinutes, in: 20...180) { editing in
+                            if !editing {
+                                let closest = Self.minuteValues.min(by: { abs($0 - durationMinutes) < abs($1 - durationMinutes) })!
+                                durationMinutes = closest
+                            }
+                        }
                         .frame(maxWidth: .infinity)
                 }
 
@@ -120,11 +131,11 @@ struct TimeTrackerApp: App {
                     switch workingMode {
                     case .sitting:
                         workingMode = .standing
-                        remaining = Self.standingDurationOptions[Int(durationIndex)]
+                        remaining = Self.standingDurationOptions[snappedIndex]
                         total = remaining
                     case .standing:
                         workingMode = .moving
-                        remaining = Self.movementDurationOptions[Int(durationIndex)]
+                        remaining = Self.movementDurationOptions[snappedIndex]
                         total = remaining
                     case .moving:
                         timerRunning = false
