@@ -11,6 +11,8 @@ enum WorkingMode: String, CaseIterable {
 @main
 struct TimeTrackerApp: App {
 
+    private let notificationService: NotificationService = OSAScriptNotificationService()
+
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
     }
@@ -24,7 +26,9 @@ struct TimeTrackerApp: App {
     @State private var workingMode: WorkingMode = .sitting
 
     private var snappedIndex: Int {
-        Self.minuteValues.enumerated().min(by: { abs($0.element - durationMinutes) < abs($1.element - durationMinutes) })!.offset
+        Self.minuteValues.enumerated().min(by: {
+            abs($0.element - durationMinutes) < abs($1.element - durationMinutes)
+        })!.offset
     }
 
     private static let sittingDurationOptions: [Int] = [
@@ -71,18 +75,17 @@ struct TimeTrackerApp: App {
         return 1 - Double(remaining) / Double(total)
     }
 
+    private func postNotification(_ title: String, _ body: String) {
+        notificationService.post(title: title, body: body)
+    }
+
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some Scene {
         MenuBarExtra {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Time Tracker")
-                    .font(.headline)
-
                 Text(workingMode.rawValue)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .font(.headline)
 
                 if timerRunning {
                     Text(remainingFormatted)
@@ -99,24 +102,26 @@ struct TimeTrackerApp: App {
                         .frame(maxWidth: .infinity, alignment: .center)
 
                     Slider(value: $durationMinutes, in: 20...180) { editing in
-                            if !editing {
-                                let closest = Self.minuteValues.min(by: { abs($0 - durationMinutes) < abs($1 - durationMinutes) })!
-                                durationMinutes = closest
-                            }
+                        if !editing {
+                            let closest = Self.minuteValues.min(by: {
+                                abs($0 - durationMinutes) < abs($1 - durationMinutes)
+                            })!
+                            durationMinutes = closest
                         }
-                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
 
                 Button(timerRunning ? "Stop" : "Start") {
                     if timerRunning {
+                        workingMode = .sitting
                         timerRunning = false
                         remaining = 0
                         total = 0
                     } else {
-                        workingMode = .sitting
                         timerRunning = true
-                        remaining = currentDuration
-                        total = currentDuration
+                        remaining = 10
+                        total = 10
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -130,14 +135,20 @@ struct TimeTrackerApp: App {
                 } else {
                     switch workingMode {
                     case .sitting:
+                        postNotification(
+                            "Time to stand", "Stand up and stretch — your sitting session is done.")
                         workingMode = .standing
                         remaining = Self.standingDurationOptions[snappedIndex]
                         total = remaining
                     case .standing:
+                        postNotification(
+                            "Time to move", "Take a short walk — your standing session is done.")
                         workingMode = .moving
                         remaining = Self.movementDurationOptions[snappedIndex]
                         total = remaining
                     case .moving:
+                        postNotification(
+                            "Session complete", "Great work! Your full work cycle is done.")
                         timerRunning = false
                         total = 0
                     }
