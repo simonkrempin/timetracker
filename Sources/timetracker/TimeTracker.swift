@@ -17,147 +17,146 @@ struct TimeTrackerApp: App {
         NSApplication.shared.setActivationPolicy(.accessory)
     }
 
-    private static let minuteValues: [Double] = [20, 30, 45, 60, 90, 120, 180]
+    private static let workSessionOptionsMinutes: [Double] = [20, 30, 45, 60, 90, 120, 180]
 
-    @State private var remaining: Int = 0
-    @State private var total: Int = 0
-    @State private var durationMinutes: Double = 45
-    @State private var timerRunning: Bool = false
-    @State private var workingMode: WorkingMode = .sitting
+    @State private var remainingPhaseSeconds: Int = 0
+    @State private var totalPhaseDurationSeconds: Int = 0
+    @State private var selectedSessionMinutes: Double = 45
+    @State private var isTimerRunning: Bool = false
+    @State private var currentWorkingMode: WorkingMode = .sitting
 
-    private var snappedIndex: Int {
-        Self.minuteValues.enumerated().min(by: {
-            abs($0.element - durationMinutes) < abs($1.element - durationMinutes)
+    private var selectedSessionIndex: Int {
+        Self.workSessionOptionsMinutes.enumerated().min(by: {
+            abs($0.element - selectedSessionMinutes) < abs($1.element - selectedSessionMinutes)
         })!.offset
     }
 
-    private static let sittingDurationOptions: [Int] = [
+    private static let sittingPhaseDurationsSeconds: [Int] = [
         20 * 60, 30 * 60, 45 * 60, 60 * 60, 90 * 60, 120 * 60, 180 * 60,
     ]
-    private static let standingDurationOptions: [Int] = [
+    private static let standingPhaseDurationsSeconds: [Int] = [
         8 * 60, 8 * 60, 8 * 60, 9 * 60, 10 * 60, 10 * 60, 10 * 60,
     ]
-    private static let movementDurationOptions: [Int] = [
+    private static let movementPhaseDurationsSeconds: [Int] = [
         2 * 60, 2 * 60, 2 * 60, 3 * 60, 4 * 60, 4 * 60, 5 * 60,
     ]
 
-    private var currentDuration: Int {
-        switch workingMode {
-        case .sitting: Self.sittingDurationOptions[snappedIndex]
-        case .standing: Self.standingDurationOptions[snappedIndex]
-        case .moving: Self.movementDurationOptions[snappedIndex]
+    private var currentPhaseDurationSeconds: Int {
+        switch currentWorkingMode {
+        case .sitting: Self.sittingPhaseDurationsSeconds[selectedSessionIndex]
+        case .standing: Self.standingPhaseDurationsSeconds[selectedSessionIndex]
+        case .moving: Self.movementPhaseDurationsSeconds[selectedSessionIndex]
         }
     }
 
-    private var formattedDuration: String {
-        let minutes = currentDuration / 60
+    private var formattedPhaseDuration: String {
+        let minutes = currentPhaseDurationSeconds / 60
         if minutes < 60 {
             return "\(minutes) min"
         }
+
         let hours = minutes / 60
-        let remainingMin = minutes % 60
-        if remainingMin == 0 {
+        let remainingMinutes = minutes % 60
+        if remainingMinutes == 0 {
             return "\(hours) hour\(hours > 1 ? "s" : "")"
         }
-        return "\(hours):\(String(format: "%02d", remainingMin)) hour"
+
+        return "\(hours):\(String(format: "%02d", remainingMinutes)) hour"
     }
 
-    private var remainingFormatted: String {
-        if remaining >= 3600 {
-            "\(remaining / 3600):\(String(format: "%02d", remaining % 3600 / 60))"
+    private var formattedRemainingTime: String {
+        if remainingPhaseSeconds >= 3600 {
+            "\(remainingPhaseSeconds / 3600):\(String(format: "%02d", remainingPhaseSeconds % 3600 / 60))"
         } else {
-            "\(remaining / 60):\(String(format: "%02d", remaining % 60))"
+            "\(remainingPhaseSeconds / 60):\(String(format: "%02d", remainingPhaseSeconds % 60))"
         }
     }
 
-    private var progress: Double {
-        guard total > 0 else { return 0 }
-        return 1 - Double(remaining) / Double(total)
+    private var phaseProgress: Double {
+        guard totalPhaseDurationSeconds > 0 else { return 0 }
+        return 1 - Double(remainingPhaseSeconds) / Double(totalPhaseDurationSeconds)
     }
 
-    private func postNotification(_ title: String, _ body: String) {
-        notificationService.post(title: title, body: body)
-    }
-
-    private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let timerPublisher = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some Scene {
         MenuBarExtra {
             VStack(alignment: .leading, spacing: 12) {
-                Text(workingMode.rawValue)
+                Text(currentWorkingMode.rawValue)
                     .font(.headline)
 
-                if timerRunning {
-                    Text(remainingFormatted)
+                if isTimerRunning {
+                    Text(formattedRemainingTime)
                         .font(.title)
                         .monospacedDigit()
                         .frame(maxWidth: .infinity, alignment: .center)
                         .contentTransition(.numericText())
 
-                    ProgressView(value: progress)
+                    ProgressView(value: phaseProgress)
                         .frame(maxWidth: .infinity)
                 } else {
-                    Text(formattedDuration)
+                    Text(formattedPhaseDuration)
                         .font(.title3)
                         .frame(maxWidth: .infinity, alignment: .center)
 
-                    Slider(value: $durationMinutes, in: 20...180) { editing in
+                    Slider(value: $selectedSessionMinutes, in: 20...180) { editing in
                         if !editing {
-                            let closest = Self.minuteValues.min(by: {
-                                abs($0 - durationMinutes) < abs($1 - durationMinutes)
+                            let closestSessionMinutes = Self.workSessionOptionsMinutes.min(by: {
+                                abs($0 - selectedSessionMinutes) < abs($1 - selectedSessionMinutes)
                             })!
-                            durationMinutes = closest
+                            selectedSessionMinutes = closestSessionMinutes
                         }
                     }
                     .frame(maxWidth: .infinity)
                 }
 
-                Button(timerRunning ? "Stop" : "Start") {
-                    if timerRunning {
-                        workingMode = .sitting
-                        timerRunning = false
-                        remaining = 0
-                        total = 0
+                Button(isTimerRunning ? "Stop" : "Start") {
+                    if isTimerRunning {
+                        currentWorkingMode = .sitting
+                        isTimerRunning = false
+                        remainingPhaseSeconds = 0
+                        totalPhaseDurationSeconds = 0
                     } else {
-                        timerRunning = true
-                        remaining = 10
-                        total = 10
+                        isTimerRunning = true
+                        remainingPhaseSeconds = currentPhaseDurationSeconds
+                        totalPhaseDurationSeconds = currentPhaseDurationSeconds
                     }
                 }
                 .buttonStyle(.borderedProminent)
             }
             .padding()
             .background(.ultraThinMaterial)
-            .onReceive(tick) { _ in
-                guard timerRunning else { return }
-                if remaining > 0 {
-                    remaining -= 1
+            .onReceive(timerPublisher) { _ in
+                guard isTimerRunning else { return }
+                if remainingPhaseSeconds > 0 {
+                    remainingPhaseSeconds -= 1
                 } else {
-                    switch workingMode {
+                    switch currentWorkingMode {
                     case .sitting:
-                        postNotification(
+                        notificationService.post(
                             "Time to stand", "Stand up and stretch — your sitting session is done.")
-                        workingMode = .standing
-                        remaining = Self.standingDurationOptions[snappedIndex]
-                        total = remaining
+                        currentWorkingMode = .standing
+                        remainingPhaseSeconds = Self.standingPhaseDurationsSeconds[selectedSessionIndex]
+                        totalPhaseDurationSeconds = remainingPhaseSeconds
                     case .standing:
-                        postNotification(
+                        notificationService.post(
                             "Time to move", "Take a short walk — your standing session is done.")
-                        workingMode = .moving
-                        remaining = Self.movementDurationOptions[snappedIndex]
-                        total = remaining
+                        currentWorkingMode = .moving
+                        remainingPhaseSeconds = Self.movementPhaseDurationsSeconds[selectedSessionIndex]
+                        totalPhaseDurationSeconds = remainingPhaseSeconds
                     case .moving:
-                        postNotification(
+                        notificationService.post(
                             "Session complete", "Great work! Your full work cycle is done.")
-                        timerRunning = false
-                        total = 0
+                        isTimerRunning = false
+                        currentWorkingMode = .sitting
+                        totalPhaseDurationSeconds = 0
                     }
                 }
             }
 
         } label: {
-            if timerRunning {
-                Text(remainingFormatted)
+            if isTimerRunning {
+                Text(formattedRemainingTime)
                     .font(.caption)
                     .fontDesign(.monospaced)
             } else {
