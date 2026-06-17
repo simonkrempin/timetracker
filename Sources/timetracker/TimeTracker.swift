@@ -170,13 +170,7 @@ struct TimeTrackerApp: App {
             }
 
         } label: {
-            if isTimerRunning {
-                Text(formattedRemainingTime)
-                    .font(.caption)
-                    .fontDesign(.monospaced)
-            } else {
-                Image(systemName: "timer")
-            }
+            Text(formattedRemainingTime)
         }
         .menuBarExtraStyle(.window)
     }
