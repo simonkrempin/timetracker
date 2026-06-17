@@ -67,11 +67,11 @@ struct TimeTrackerApp: App {
     }
 
     private var formattedRemainingTime: String {
-        if remainingPhaseSeconds >= 3600 {
-            "\(remainingPhaseSeconds / 3600):\(String(format: "%02d", remainingPhaseSeconds % 3600 / 60))"
-        } else {
-            "\(remainingPhaseSeconds / 60):\(String(format: "%02d", remainingPhaseSeconds % 60))"
-        }
+        let divisionScaling = remainingPhaseSeconds > 3600 ? (3600, 60) : (60, 1)
+        let remainingHoursOrMinutes = remainingPhaseSeconds / divisionScaling.0
+        let remainingMinutesOrSeconds = remainingPhaseSeconds % divisionScaling.0 / divisionScaling.1
+
+        return "\(String(format: "%02d", remainingHoursOrMinutes)):\(String(format: "%02d", remainingMinutesOrSeconds))"
     }
 
     private var phaseProgress: Double {
