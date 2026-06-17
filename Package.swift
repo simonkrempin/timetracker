@@ -14,7 +14,13 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "TimeTracker",
-            path: "Sources"
+            dependencies: [
+                .product(name: "Lottie", package: "lottie-spm")
+            ],
+            path: "Sources",
+            resources: [
+                .process("animations")
+            ]
         )
     ]
 )

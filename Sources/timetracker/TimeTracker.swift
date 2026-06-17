@@ -12,9 +12,11 @@ enum WorkingMode: String, CaseIterable {
 struct TimeTrackerApp: App {
 
     private let notificationService: NotificationService = OSAScriptNotificationService()
+    @StateObject private var animationQueue = AnimationQueue()
 
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
+        animationQueue.enqueue(.moving)
     }
 
     private static let workSessionOptionsMinutes: [Double] = [20, 30, 45, 60, 90, 120, 180]
@@ -85,6 +87,9 @@ struct TimeTrackerApp: App {
                 Text(currentWorkingMode.rawValue)
                     .font(.headline)
 
+                AnimationPlayer(queue: animationQueue)
+                    .frame(width: 200, height: 200)
+
                 if isTimerRunning {
                     Text(formattedRemainingTime)
                         .font(.title)
@@ -120,6 +125,7 @@ struct TimeTrackerApp: App {
                         isTimerRunning = true
                         remainingPhaseSeconds = currentPhaseDurationSeconds
                         totalPhaseDurationSeconds = currentPhaseDurationSeconds
+                        animationQueue.enqueue(.moving) // TODO: change to sitting when animation is ready
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -134,22 +140,31 @@ struct TimeTrackerApp: App {
                     switch currentWorkingMode {
                     case .sitting:
                         notificationService.post(
-                            "Time to stand", "Stand up and stretch — your sitting session is done.")
+                            title: "Time to stand",
+                            body: "Stand up and stretch — your sitting session is done.")
                         currentWorkingMode = .standing
                         remainingPhaseSeconds = Self.standingPhaseDurationsSeconds[selectedSessionIndex]
                         totalPhaseDurationSeconds = remainingPhaseSeconds
+                        animationQueue.enqueue(.sittingToStanding)
+                        animationQueue.enqueue(.standing)
                     case .standing:
                         notificationService.post(
-                            "Time to move", "Take a short walk — your standing session is done.")
+                            title: "Time to move",
+                            body: "Take a short walk — your standing session is done.")
                         currentWorkingMode = .moving
                         remainingPhaseSeconds = Self.movementPhaseDurationsSeconds[selectedSessionIndex]
                         totalPhaseDurationSeconds = remainingPhaseSeconds
+                        animationQueue.enqueue(.standingToMoving)
+                        animationQueue.enqueue(.moving)
                     case .moving:
                         notificationService.post(
-                            "Session complete", "Great work! Your full work cycle is done.")
+                            title: "Session complete",
+                            body: "Great work! Your full work cycle is done.")
                         isTimerRunning = false
                         currentWorkingMode = .sitting
                         totalPhaseDurationSeconds = 0
+                        animationQueue.enqueue(.movingToSitting)
+                        animationQueue.enqueue(.sitting)
                     }
                 }
             }
