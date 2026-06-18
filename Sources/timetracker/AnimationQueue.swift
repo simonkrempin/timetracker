@@ -12,12 +12,12 @@ final class AnimationQueue: ObservableObject {
 
         var name: String {
             switch self {
-            case .sitting:    "sitting"
-            case .standing:   "standing"
-            case .moving:     "moving"
+            case .sitting: "sitting"
+            case .standing: "standing"
+            case .moving: "moving"
             case .sittingToStanding: "sitting_to_standing"
             case .standingToMoving: "standing_to_moving"
-            case .movingToSitting:  "moving_to_sitting"
+            case .movingToSitting: "moving_to_sitting"
             }
         }
     }

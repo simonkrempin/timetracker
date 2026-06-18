@@ -68,8 +68,8 @@ struct AnimationPlayer: NSViewRepresentable {
             view?.play(
                 fromProgress: currentProgress,
                 toProgress: 1,
-                loopMode: .playOnce)
-            { [weak self] _ in
+                loopMode: .playOnce
+            ) { [weak self] _ in
                 self?.onComplete()
             }
         }

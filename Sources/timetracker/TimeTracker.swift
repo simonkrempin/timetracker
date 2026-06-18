@@ -10,7 +10,6 @@ enum WorkingMode: String, CaseIterable {
 
 @main
 struct TimeTrackerApp: App {
-
     private let notificationService: NotificationService = OSAScriptNotificationService()
     @StateObject private var animationQueue = AnimationQueue()
 
@@ -69,9 +68,11 @@ struct TimeTrackerApp: App {
     private var formattedRemainingTime: String {
         let divisionScaling = remainingPhaseSeconds > 3600 ? (3600, 60) : (60, 1)
         let remainingHoursOrMinutes = remainingPhaseSeconds / divisionScaling.0
-        let remainingMinutesOrSeconds = remainingPhaseSeconds % divisionScaling.0 / divisionScaling.1
+        let remainingMinutesOrSeconds =
+            remainingPhaseSeconds % divisionScaling.0 / divisionScaling.1
 
-        return "\(String(format: "%02d", remainingHoursOrMinutes)):\(String(format: "%02d", remainingMinutesOrSeconds))"
+        return
+            "\(String(format: "%02d", remainingHoursOrMinutes)):\(String(format: "%02d", remainingMinutesOrSeconds))"
     }
 
     private var phaseProgress: Double {
@@ -87,13 +88,12 @@ struct TimeTrackerApp: App {
                 Text(currentWorkingMode.rawValue)
                     .font(.headline)
 
-                AnimationPlayer(queue: animationQueue)
-                    .frame(width: 200, height: 200)
+                // AnimationPlayer(queue: animationQueue)
+                //     .frame(width: 200, height: 200)
 
                 if isTimerRunning {
                     Text(formattedRemainingTime)
-                        .font(.title)
-                        .monospacedDigit()
+                        .font(.title2)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .contentTransition(.numericText())
 
@@ -101,8 +101,9 @@ struct TimeTrackerApp: App {
                         .frame(maxWidth: .infinity)
                 } else {
                     Text(formattedPhaseDuration)
-                        .font(.title3)
+                        .font(.title2)
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .contentTransition(.numericText())
 
                     Slider(value: $selectedSessionMinutes, in: 20...180) { editing in
                         if !editing {
@@ -125,7 +126,7 @@ struct TimeTrackerApp: App {
                         isTimerRunning = true
                         remainingPhaseSeconds = currentPhaseDurationSeconds
                         totalPhaseDurationSeconds = currentPhaseDurationSeconds
-                        animationQueue.enqueue(.moving) // TODO: change to sitting when animation is ready
+                        animationQueue.enqueue(.moving)  // TODO: change to sitting when animation is ready
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -143,7 +144,8 @@ struct TimeTrackerApp: App {
                             title: "Time to stand",
                             body: "Stand up and stretch — your sitting session is done.")
                         currentWorkingMode = .standing
-                        remainingPhaseSeconds = Self.standingPhaseDurationsSeconds[selectedSessionIndex]
+                        remainingPhaseSeconds =
+                            Self.standingPhaseDurationsSeconds[selectedSessionIndex]
                         totalPhaseDurationSeconds = remainingPhaseSeconds
                         animationQueue.enqueue(.sittingToStanding)
                         animationQueue.enqueue(.standing)
@@ -152,7 +154,8 @@ struct TimeTrackerApp: App {
                             title: "Time to move",
                             body: "Take a short walk — your standing session is done.")
                         currentWorkingMode = .moving
-                        remainingPhaseSeconds = Self.movementPhaseDurationsSeconds[selectedSessionIndex]
+                        remainingPhaseSeconds =
+                            Self.movementPhaseDurationsSeconds[selectedSessionIndex]
                         totalPhaseDurationSeconds = remainingPhaseSeconds
                         animationQueue.enqueue(.standingToMoving)
                         animationQueue.enqueue(.moving)
